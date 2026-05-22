@@ -1,115 +1,323 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
 
-const G = {
-  bg: "#080c10", surface: "#0d1219", border: "#1a2535",
-  green: "#00e5a0", red: "#ff4d6a", yellow: "#f5c518", blue: "#4d9fff",
-  text: "#c8d8e8", dim: "#4a6a8a", bright: "#e8f4ff",
-};
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const DEMO = [
   {
     market: { question: "Will the Fed cut rates in June 2026?", yesPrice: 0.34, volume24hr: 284000 },
-    analysis: { probability: 0.52, confidence: "medium", edge: 0.18, recommendation: "BET_YES", keyInsight: "Market underweights recent CPI softening. Fed has signaled openness to cuts if inflation holds below 2.8%.", reasoningTrace: "Base rate for Fed cuts in low-inflation environments is ~55%. Current core CPI at 2.7% gives the Fed cover. Market appears anchored to previous hawkish stance without updating for recent data." },
+    analysis: {
+      probability: 0.52,
+      confidence: "medium",
+      edge: 0.18,
+      recommendation: "BET_YES",
+      keyInsight: "Market underweights recent CPI softening. Fed has signaled openness to cuts if inflation holds below 2.8%.",
+      reasoningTrace:
+        "Base rate for Fed cuts in low-inflation environments is around 55%. Current core CPI at 2.7% gives the Fed cover. Market appears anchored to the previous hawkish stance without updating for recent data.",
+    },
     sizing: { side: "YES", edgePct: "18.0%", betSize: 4.5 },
-    trade: { paper: true, orderId: "paper_abc123" }, hasEdge: true,
+    trade: { paper: true, orderId: "paper_abc123" },
+    hasEdge: true,
   },
   {
     market: { question: "Will Bitcoin reach $120K before July 2026?", yesPrice: 0.61, volume24hr: 1240000 },
-    analysis: { probability: 0.44, confidence: "medium", edge: -0.17, recommendation: "BET_NO", keyInsight: "Market overweights ETF inflows. High funding rates on perps signal crowded longs.", reasoningTrace: "BTC needs ~20% upside in ~6 weeks. Historically happens in <35% of similar setups. ETF inflows net negative past two weeks. 61% seems overconfident." },
+    analysis: {
+      probability: 0.44,
+      confidence: "medium",
+      edge: -0.17,
+      recommendation: "BET_NO",
+      keyInsight: "Market overweights ETF inflows. High funding rates on perps signal crowded longs.",
+      reasoningTrace:
+        "BTC needs roughly 20% upside in about six weeks. Historically that happens in fewer than 35% of comparable setups. ETF inflows have weakened while derivatives positioning remains crowded.",
+    },
     sizing: { side: "NO", edgePct: "17.0%", betSize: 3.8 },
-    trade: { paper: true, orderId: "paper_def456" }, hasEdge: true,
+    trade: { paper: true, orderId: "paper_def456" },
+    hasEdge: true,
   },
   {
     market: { question: "Will ETH ETF net inflows exceed $1B in May 2026?", yesPrice: 0.48, volume24hr: 92000 },
-    analysis: { probability: 0.51, confidence: "low", edge: 0.03, recommendation: "PASS", keyInsight: "Market fairly priced. Edge below threshold.", reasoningTrace: "Current ETH ETF flows tracking ~$800M/month. $1B requires slight acceleration. No strong information asymmetry identified." },
-    sizing: null, trade: null, hasEdge: false,
+    analysis: {
+      probability: 0.51,
+      confidence: "low",
+      edge: 0.03,
+      recommendation: "PASS",
+      keyInsight: "Market is close to fair value. Edge is below the agent threshold.",
+      reasoningTrace:
+        "Current ETH ETF flows are tracking below the target pace. Reaching $1B requires acceleration, but there is no strong evidence that the market is materially mispriced.",
+    },
+    sizing: null,
+    trade: null,
+    hasEdge: false,
   },
 ];
 
-function Card({ item, i }) {
-  const [open, setOpen] = useState(false);
-  const { market, analysis, sizing, trade, hasEdge } = item;
-  const isYes = analysis.recommendation === "BET_YES";
-  const isNo = analysis.recommendation === "BET_NO";
-  const accent = !hasEdge ? G.dim : isYes ? G.green : G.red;
+function compactAddress(address) {
+  if (!address) return "Not connected";
+  return `${address.slice(0, 8)}...${address.slice(-6)}`;
+}
+
+function formatUsd(value) {
+  const n = Number(value || 0);
+  return `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function getUsdcBalance(data) {
+  const erc20 = data?.balances?.find((b) => b.token?.symbol === "USDC" && b.token?.standard === "ERC20");
+  const native = data?.balances?.find((b) => b.token?.symbol === "USDC");
+  return erc20?.amount || native?.amount || "0";
+}
+
+function ShellButton({ children, active, disabled, onClick, variant = "primary" }) {
+  return (
+    <button className={`shellButton ${variant} ${active ? "active" : ""}`} disabled={disabled} onClick={onClick}>
+      {children}
+    </button>
+  );
+}
+
+function WalletPanel({ data }) {
+  if (data?.error) {
+    return (
+      <section className="walletPanel danger">
+        <div>
+          <p className="eyebrow">Circle Wallet</p>
+          <h2>Setup Needs Attention</h2>
+          <p>{data.message || data.error}</p>
+        </div>
+        <span className="statusPill danger">Blocked</span>
+      </section>
+    );
+  }
+
+  if (!data) {
+    return (
+      <section className="walletPanel loading">
+        <div>
+          <p className="eyebrow">Circle Wallet</p>
+          <h2>Loading Arc Wallet</h2>
+          <p>Checking the agent treasury and settlement rail.</p>
+        </div>
+        <span className="statusPill">Syncing</span>
+      </section>
+    );
+  }
+
+  const balance = getUsdcBalance(data);
+  const address = data.wallet?.address || "";
+  const mode = data.liveMode ? "Live Mode" : "Paper Mode";
 
   return (
-    <div onClick={() => setExpanded(!open)} style={{ borderLeft: `3px solid ${accent}`, background: G.surface, border: `1px solid ${open ? accent + "50" : G.border}`, borderLeftColor: accent, borderRadius: 6, padding: "14px 16px", marginBottom: 8, cursor: "pointer", animation: "fadeIn 0.3s ease" }}
-      onClick={() => setOpen(!open)}>
-
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 3, border: `1px solid ${accent}`, color: accent, background: accent + "15" }}>
-              {analysis.recommendation}
-            </span>
-            <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 3, border: `1px solid ${G.border}`, color: G.dim }}>
-              {analysis.confidence} confidence
-            </span>
-            {trade && <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 3, border: `1px solid ${G.blue}`, color: G.blue, background: G.blue + "15" }}>● EXECUTED</span>}
-          </div>
-          <div style={{ fontSize: 14, color: G.bright, lineHeight: 1.4, fontWeight: 600 }}>{market.question}</div>
+    <section className="walletPanel">
+      <div className="walletIdentity">
+        <p className="eyebrow">Settlement Rail</p>
+        <h2>Arc Testnet Treasury</h2>
+        <p className="addressLine">{compactAddress(address)}</p>
+        {data.escrowAddress && <p className="addressLine">Escrow {compactAddress(data.escrowAddress)}</p>}
+      </div>
+      <div className="walletStats">
+        <div>
+          <span>USDC</span>
+          <strong>{formatUsd(balance)}</strong>
         </div>
-        {hasEdge && sizing && (
-          <div style={{ textAlign: "right", flexShrink: 0 }}>
-            <div style={{ fontSize: 22, color: accent, fontWeight: 700 }}>{sizing.edgePct}</div>
-            <div style={{ fontSize: 10, color: G.dim }}>edge</div>
+        <div>
+          <span>State</span>
+          <strong>{data.wallet?.state || "Pending"}</strong>
+        </div>
+      </div>
+      <span className={`statusPill ${data.liveMode ? "live" : ""}`}>{mode}</span>
+    </section>
+  );
+}
+
+function MetricStrip({ stats, deployed, walletData }) {
+  const balance = Number(getUsdcBalance(walletData));
+  const metrics = [
+    ["Treasury", formatUsd(balance || 100), "Circle funded"],
+    ["Committed", formatUsd(deployed), "Kelly sized"],
+    ["Markets", stats.scanned, "live scan"],
+    ["Edges", stats.edge, "above filter"],
+    ["Actions", stats.trades, "orders or transfers"],
+  ];
+
+  return (
+    <section className="metricStrip">
+      {metrics.map(([label, value, hint]) => (
+        <div className="metric" key={label}>
+          <span>{label}</span>
+          <strong>{value}</strong>
+          <small>{hint}</small>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function DecisionRail({ items, running }) {
+  const best = items.find((item) => item.hasEdge && item.sizing) || items[0];
+  const recommendation = best?.analysis?.recommendation || "WAITING";
+  const edge = best?.sizing?.edgePct || "0.0%";
+  const side = best?.sizing?.side || "PASS";
+
+  return (
+    <section className="decisionRail">
+      <div>
+        <p className="eyebrow">Current Decision</p>
+        <h1>{running ? "Scanning live markets" : recommendation.replace("_", " ")}</h1>
+        <p>{best?.analysis?.keyInsight || "Run the agent to surface a live thesis."}</p>
+      </div>
+      <div className="decisionDial">
+        <span>Edge</span>
+        <strong>{edge}</strong>
+        <small>{side}</small>
+      </div>
+    </section>
+  );
+}
+
+function ProofPanel({ lastAction, walletData }) {
+  const live = walletData?.liveMode;
+  const escrow = walletData?.escrowAddress;
+
+  return (
+    <section className="proofPanel">
+      <div>
+        <p className="eyebrow">Proof of Action</p>
+        <h2>{lastAction ? "Agent executed an Arc action" : live ? "Live execution armed" : "Paper execution active"}</h2>
+        <p>
+          {lastAction
+            ? `Latest action moved ${formatUsd(lastAction.size)} USDC for a ${lastAction.side} thesis.`
+            : live
+              ? "The next qualified edge will create a capped Circle transfer on Arc Testnet."
+              : "Switch PAPER_TRADING=false to send capped Arc Testnet USDC transfers."}
+        </p>
+      </div>
+      <div className="proofGrid">
+        <div>
+          <span>Destination</span>
+          <strong>{compactAddress(escrow)}</strong>
+        </div>
+        <div>
+          <span>Execution</span>
+          <strong>{lastAction ? "Circle transfer" : live ? "Armed" : "Paper"}</strong>
+        </div>
+        <div>
+          <span>Amount</span>
+          <strong>{lastAction ? `${formatUsd(lastAction.size)} USDC` : "1 USDC cap"}</strong>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function MarketCard({ item }) {
+  const [open, setOpen] = useState(false);
+  const { market, analysis, sizing, trade, hasEdge } = item;
+  const isNo = analysis.recommendation === "BET_NO";
+  const accent = hasEdge ? (isNo ? "no" : "yes") : "pass";
+  const marketPct = Math.round((market.yesPrice || 0) * 100);
+  const agentPct = Math.round((analysis.probability || 0) * 100);
+
+  return (
+    <article className={`marketCard ${accent}`} onClick={() => setOpen((v) => !v)}>
+      <div className="marketTopline">
+        <div>
+          <div className="tagRow">
+            <span className="tag primary">{analysis.recommendation}</span>
+            <span className="tag">{analysis.confidence} confidence</span>
+            {analysis.fallback && <span className="tag warning">AI fallback</span>}
+            {trade && <span className="tag actioned">{trade.paper ? "Paper action" : "Arc transfer"}</span>}
           </div>
-        )}
+          <h3>{market.question}</h3>
+        </div>
+        <div className="edgeBlock">
+          <strong>{sizing?.edgePct || "Fair"}</strong>
+          <span>{sizing?.side || "PASS"}</span>
+        </div>
       </div>
 
-      {hasEdge && (
-        <div style={{ marginTop: 10 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: G.dim, marginBottom: 4 }}>
-            <span>MARKET {(market.yesPrice * 100).toFixed(0)}%</span>
-            <span>AGENT {(analysis.probability * 100).toFixed(0)}%</span>
-          </div>
-          <div style={{ height: 4, background: G.border, borderRadius: 2, position: "relative" }}>
-            <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${market.yesPrice * 100}%`, background: G.blue, borderRadius: 2, opacity: 0.5 }} />
-            <div style={{ position: "absolute", top: -3, width: 2, height: 10, background: accent, left: `${analysis.probability * 100}%`, transform: "translateX(-50%)", borderRadius: 1 }} />
-          </div>
+      <div className="probabilityBand" aria-label="Market price and agent probability">
+        <div className="bandLabels">
+          <span>Market {marketPct}%</span>
+          <span>Agent {agentPct}%</span>
         </div>
-      )}
+        <div className="bandTrack">
+          <div className="marketFill" style={{ width: `${marketPct}%` }} />
+          <div className="agentPin" style={{ left: `${agentPct}%` }} />
+        </div>
+      </div>
 
-      <div style={{ marginTop: 8, fontSize: 12, color: G.dim, fontStyle: "italic", lineHeight: 1.5 }}>{analysis.keyInsight}</div>
+      <p className="insight">{analysis.keyInsight}</p>
 
       {open && (
-        <div style={{ marginTop: 12, borderTop: `1px solid ${G.border}`, paddingTop: 12 }}>
-          <div style={{ fontSize: 10, color: G.dim, letterSpacing: "0.1em", marginBottom: 6 }}>REASONING TRACE</div>
-          <div style={{ fontSize: 12, color: G.text, lineHeight: 1.7, background: G.bg, padding: "10px 12px", borderRadius: 4 }}>{analysis.reasoningTrace}</div>
-          {sizing && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginTop: 10 }}>
-              {[["BET SIZE", `$${sizing.betSize} USDC`], ["SIDE", sizing.side], ["EDGE", sizing.edgePct]].map(([l, v]) => (
-                <div key={l} style={{ background: G.bg, padding: "8px 10px", borderRadius: 4 }}>
-                  <div style={{ fontSize: 9, color: G.dim, letterSpacing: "0.1em" }}>{l}</div>
-                  <div style={{ fontSize: 14, color: accent, fontWeight: 700, marginTop: 2 }}>{v}</div>
-                </div>
-              ))}
+        <div className="tracePanel">
+          <p className="eyebrow">Public Reasoning Trace</p>
+          <p>{analysis.reasoningTrace}</p>
+          <div className="tradeGrid">
+            <div>
+              <span>Kelly Size</span>
+              <strong>{sizing ? `${formatUsd(sizing.betSize)} USDC` : "None"}</strong>
             </div>
-          )}
-          {trade && <div style={{ marginTop: 8, fontSize: 10, color: G.dim }}>📋 PAPER · {trade.orderId}</div>}
+            <div>
+              <span>Execution</span>
+              <strong>{trade ? (trade.paper ? "Paper" : "Arc") : "Skipped"}</strong>
+            </div>
+            <div>
+              <span>Volume 24h</span>
+              <strong>{formatUsd(market.volume24hr)}</strong>
+            </div>
+          </div>
         </div>
       )}
-    </div>
+    </article>
+  );
+}
+
+function AgentLog({ log, logRef }) {
+  return (
+    <aside className="logPanel">
+      <div className="panelHeader">
+        <p className="eyebrow">Audit Log</p>
+        <span>{log.length} events</span>
+      </div>
+      <div className="logStream" ref={logRef}>
+        {log.map((line, index) => (
+          <p className={line.includes("FAILED") || line.startsWith("✗") ? "bad" : line.includes("TRADE") || line.includes("TRANSFER") ? "good" : ""} key={`${line}-${index}`}>
+            <span>{String(index + 1).padStart(2, "0")}</span>
+            {line.replace("✓", "").replace("✗", "")}
+          </p>
+        ))}
+      </div>
+    </aside>
   );
 }
 
 export default function Home() {
   const [items, setItems] = useState(DEMO);
   const [running, setRunning] = useState(false);
+  const [autoRun, setAutoRun] = useState(false);
   const [stats, setStats] = useState({ scanned: "—", trades: "—", edge: "—" });
-  const [log, setLog] = useState(["Ready. Click RUN AGENT to start."]);
+  const [log, setLog] = useState(["Ready. Run the agent to scan live markets."]);
   const [error, setError] = useState(null);
+  const [walletData, setWalletData] = useState(null);
+  const [lastAction, setLastAction] = useState(null);
   const logRef = useRef(null);
 
-  useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [log]);
+  useEffect(() => {
+    fetch("/api/wallet")
+      .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+      .then(({ ok, data }) => setWalletData(ok ? data : { ...data, error: data.error || "Wallet request failed" }))
+      .catch((err) => setWalletData({ error: err.message, message: "Could not reach /api/wallet." }));
+  }, []);
+
+  useEffect(() => {
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+  }, [log]);
 
   async function run() {
     if (running) return;
     setRunning(true);
     setError(null);
-    setLog(["Initiating market scan..."]);
+    setLog(["Starting autonomous market scan."]);
+
     try {
       const res = await fetch("/api/agent/run", {
         method: "POST",
@@ -120,98 +328,91 @@ export default function Home() {
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setItems(data.results || []);
+      setLastAction((data.results || []).find((item) => item.trade && !item.trade.paper && !item.trade.failed && !item.trade.skipped)?.trade || null);
       setStats({ scanned: data.marketsScanned, trades: data.tradesExecuted, edge: data.opportunitiesFound });
-      setLog(data.log || ["Done."]);
-    } catch (e) {
-      setError(e.message);
-      setLog((p) => [...p, `✗ ${e.message}`]);
+      setLog(data.log || ["Scan complete."]);
+    } catch (err) {
+      setError(err.message);
+      setLog((prev) => [...prev, `FAILED: ${err.message}`]);
     } finally {
       setRunning(false);
     }
   }
 
-  const deployed = items.filter((i) => i.trade).reduce((s, i) => s + (i.sizing?.betSize || 0), 0);
+  useEffect(() => {
+    if (!autoRun) return;
+    const id = setInterval(() => {
+      if (!running) run();
+    }, 60000);
+    return () => clearInterval(id);
+  }, [autoRun, running]);
+
+  const deployed = useMemo(
+    () => items.filter((item) => item.trade && !item.trade.failed).reduce((sum, item) => sum + (item.sizing?.betSize || 0), 0),
+    [items]
+  );
 
   return (
-    <div style={{ minHeight: "100vh", background: G.bg }}>
-      <div style={{ maxWidth: 880, margin: "0 auto", padding: "24px 16px" }}>
-
-        {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <div>
-            <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-0.02em" }}>
-              <span style={{ color: G.green }}>AGENT</span><span style={{ color: G.bright }}>ORACLE</span>
-              <span style={{ fontSize: 10, color: G.dim, marginLeft: 10, border: `1px solid ${G.border}`, padding: "2px 6px", borderRadius: 3 }}>PAPER MODE</span>
-            </div>
-            <div style={{ fontSize: 11, color: G.dim, marginTop: 3 }}>Autonomous AI prediction market trader · Polymarket × Arc × Circle</div>
-          </div>
-          <button onClick={run} disabled={running} style={{
-            background: running ? G.border : G.green, color: running ? G.dim : G.bg,
-            border: "none", borderRadius: 4, padding: "10px 18px", fontSize: 12,
-            fontFamily: "inherit", fontWeight: 700, cursor: running ? "not-allowed" : "pointer",
-            letterSpacing: "0.06em", transition: "all 0.2s",
-          }}>
-            {running ? "⟳ SCANNING..." : "▶ RUN AGENT"}
-          </button>
+    <main className="appShell">
+      <nav className="topNav">
+        <div className="brandMark">
+          <span>AO</span>
+          AgentOracle
         </div>
+        <div className="navLinks">
+          <span>Markets</span>
+          <span>Wallets</span>
+          <span>Arc</span>
+        </div>
+      </nav>
 
-        {/* Stats bar */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 8, marginBottom: 16 }}>
-          {[
-            ["BANKROLL", "$100.00", G.bright],
-            ["DEPLOYED", `$${deployed.toFixed(2)}`, G.yellow],
-            ["CASH", `$${(100 - deployed).toFixed(2)}`, G.green],
-            ["MARKETS", stats.scanned, G.blue],
-            ["TRADES", stats.trades, G.green],
-          ].map(([l, v, c]) => (
-            <div key={l} style={{ background: G.surface, border: `1px solid ${G.border}`, borderRadius: 6, padding: "10px 12px" }}>
-              <div style={{ fontSize: 9, color: G.dim, letterSpacing: "0.12em" }}>{l}</div>
-              <div style={{ fontSize: 18, color: c, fontWeight: 700, marginTop: 2 }}>{v}</div>
+      <section className="heroBar">
+        <div>
+          <p className="eyebrow">Circle Agent Stack × Arc Testnet</p>
+          <h1>Financial intelligence for prediction markets.</h1>
+          <p>
+            AgentOracle scans live Polymarket order books, estimates fair odds, explains its thesis,
+            sizes exposure with Kelly, and settles test USDC through Circle developer-controlled wallets.
+          </p>
+        </div>
+        <div className="heroActions">
+          <ShellButton variant="secondary" active={autoRun} onClick={() => setAutoRun((value) => !value)}>
+            {autoRun ? "Auto running" : "Auto 60s"}
+          </ShellButton>
+          <ShellButton disabled={running} onClick={run}>
+            {running ? "Scanning" : "Run agent"}
+          </ShellButton>
+        </div>
+      </section>
+
+      <WalletPanel data={walletData} />
+      <MetricStrip stats={stats} deployed={deployed} walletData={walletData} />
+      <DecisionRail items={items} running={running} />
+      <ProofPanel lastAction={lastAction} walletData={walletData} />
+
+      {error && <div className="errorBanner">{error}</div>}
+
+      <section className="workbench">
+        <div className="marketColumn">
+          <div className="panelHeader">
+            <div>
+              <p className="eyebrow">Opportunity Book</p>
+              <h2>{items.length} Markets Under Review</h2>
             </div>
+            <span>Click any thesis</span>
+          </div>
+          {items.map((item, index) => (
+            <MarketCard item={item} key={`${item.market.question}-${index}`} />
           ))}
         </div>
+        <AgentLog log={log} logRef={logRef} />
+      </section>
 
-        {error && (
-          <div style={{ background: "#ff4d6a15", border: `1px solid ${G.red}`, color: G.red, borderRadius: 4, padding: "10px 14px", marginBottom: 12, fontSize: 12 }}>
-            ✗ {error}
-          </div>
-        )}
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 240px", gap: 12 }}>
-          {/* Opportunities */}
-          <div>
-            <div style={{ fontSize: 10, color: G.dim, letterSpacing: "0.12em", marginBottom: 8 }}>
-              OPPORTUNITIES · {items.length} markets · click to expand
-            </div>
-            {items.map((item, i) => <Card key={i} item={item} i={i} />)}
-          </div>
-
-          {/* Log */}
-          <div>
-            <div style={{ fontSize: 10, color: G.dim, letterSpacing: "0.12em", marginBottom: 8 }}>AGENT LOG</div>
-            <div ref={logRef} style={{ background: G.surface, border: `1px solid ${G.border}`, borderRadius: 6, padding: 10, height: 320, overflowY: "auto", fontSize: 10, lineHeight: 1.9 }}>
-              {log.map((l, i) => (
-                <div key={i} style={{ color: l.startsWith("✗") ? G.red : l.startsWith("✓") || l.includes("TRADE") ? G.green : G.dim }}>{l}</div>
-              ))}
-            </div>
-
-            <div style={{ marginTop: 10, background: G.surface, border: `1px solid ${G.border}`, borderRadius: 6, padding: "12px 14px" }}>
-              <div style={{ fontSize: 9, color: G.dim, letterSpacing: "0.12em", marginBottom: 8 }}>HOW IT WORKS</div>
-              {[["01", "Scans Polymarket live markets"], ["02", "Gemini estimates true probability"], ["03", "Kelly Criterion sizes each bet"], ["04", "Executes if edge > 5%"], ["05", "Trace published publicly"]].map(([n, t]) => (
-                <div key={n} style={{ display: "flex", gap: 8, marginBottom: 4, fontSize: 11 }}>
-                  <span style={{ color: G.green, fontWeight: 700 }}>{n}</span>
-                  <span style={{ color: G.dim }}>{t}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div style={{ marginTop: 20, borderTop: `1px solid ${G.border}`, paddingTop: 12, fontSize: 10, color: G.dim, display: "flex", justifyContent: "space-between" }}>
-          <span>AgentOracle · Agora Hackathon 2026 · Canteen × Circle × Arc</span>
-          <span>Paper trading active</span>
-        </div>
-      </div>
-    </div>
+      <footer className="footerLine">
+        <span>Polymarket intelligence</span>
+        <span>Circle developer-controlled wallet</span>
+        <span>Arc Testnet settlement</span>
+      </footer>
+    </main>
   );
 }

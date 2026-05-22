@@ -17,13 +17,26 @@ export async function getPrice(tokenId) {
   return parseFloat(data.price);
 }
 
+function parseJsonField(value, fallback = []) {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== "string") return fallback;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+}
+
 export async function getMarketsWithPrices(limit = 8) {
   const markets = await getMarkets(limit);
   const enriched = await Promise.all(
     markets.map(async (m) => {
-      const tokenId = m.clobTokenIds?.[0];
+      const tokenIds = parseJsonField(m.clobTokenIds);
+      const outcomePrices = parseJsonField(m.outcomePrices);
+      const tokenId = tokenIds[0];
       if (!tokenId) return null;
-      const yesPrice = await getPrice(tokenId);
+      const livePrice = await getPrice(tokenId);
+      const yesPrice = livePrice || parseFloat(outcomePrices[0]);
       if (!yesPrice) return null;
       return { ...m, yesPrice, noPrice: 1 - yesPrice, yesTokenId: tokenId };
     })

@@ -8,13 +8,14 @@
     "start": "next start"
   },
   "dependencies": {
+    "@circle-fin/developer-controlled-wallets": "^10.3.1",
     "next": "14.2.0",
     "react": "^18",
     "react-dom": "^18"
   },
   "devDependencies": {
-    "tailwindcss": "^3.4.0",
+    "autoprefixer": "^10",
     "postcss": "^8",
-    "autoprefixer": "^10"
+    "tailwindcss": "^3.4.0"
   }
 }

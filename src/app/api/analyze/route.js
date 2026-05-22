@@ -1,5 +1,46 @@
 export const runtime = "nodejs";
 
+async function callGemini(model, prompt) {
+  return fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 1024,
+          responseMimeType: "application/json",
+        },
+      }),
+    }
+  );
+}
+
+function fallbackAnalysis(market, reason = "Gemini unavailable") {
+  const yesPrice = Number(market.yesPrice || 0.5);
+  const volume = Number(market.volume24hr || 0);
+  const volatilityNudge = Math.min(0.08, Math.log10(Math.max(volume, 10)) / 100);
+  const crowdedExtreme = yesPrice > 0.85 ? -0.08 : yesPrice < 0.15 ? 0.08 : 0;
+  const probability = Math.max(0.03, Math.min(0.97, yesPrice + crowdedExtreme + volatilityNudge));
+  const edge = probability - yesPrice;
+  const recommendation = Math.abs(edge) >= 0.05 ? (edge > 0 ? "BET_YES" : "BET_NO") : "PASS";
+
+  return {
+    probability: Number(probability.toFixed(3)),
+    confidence: "low",
+    edge: Number(edge.toFixed(3)),
+    recommendation,
+    keyInsight: `${reason}. Fallback model adjusted the market price for extreme crowding and liquidity.`,
+    reasoningTrace:
+      `Fallback analysis used the current YES price as the base rate, then applied a small liquidity adjustment from 24h volume. ` +
+      `Extreme prices were mean-reverted to avoid blindly following crowded markets. ` +
+      `This trace is deterministic and should be replaced by Gemini when quota is available.`,
+    fallback: true,
+  };
+}
+
 export async function POST(req) {
   const { market } = await req.json();
   if (!market) return Response.json({ error: "No market" }, { status: 400 });
@@ -25,22 +66,23 @@ Respond ONLY with valid JSON, no markdown:
 }`;
 
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 512 },
-        }),
-      }
-    );
+    const models = [process.env.GEMINI_MODEL || "gemini-2.0-flash", "gemini-2.5-flash"];
+    let res = null;
+    let err = "";
 
-    if (!res.ok) {
-      const err = await res.text();
+    for (const model of models) {
+      res = await callGemini(model, prompt);
+      if (res.ok) break;
+      err = await res.text();
+      if (!err.includes("NOT_FOUND") && !err.includes("not found")) break;
+    }
+
+    if (!res?.ok) {
       console.error("Gemini error:", err);
-      return Response.json({ error: "Gemini API error" }, { status: 500 });
+      if (err.includes("429") || err.includes("quota") || process.env.ALLOW_AI_FALLBACK !== "false") {
+        return Response.json(fallbackAnalysis(market, "Gemini quota exceeded"));
+      }
+      return Response.json({ error: "Gemini API error", details: err.slice(0, 300) }, { status: 500 });
     }
 
     const data = await res.json();
