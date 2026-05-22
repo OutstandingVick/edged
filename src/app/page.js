@@ -151,6 +151,11 @@ function MetricStrip({ stats, deployed, walletData }) {
   );
 }
 
+function formatTime(value) {
+  if (!value) return "—";
+  return new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
 function DecisionRail({ items, running }) {
   const best = items.find((item) => item.hasEdge && item.sizing) || items[0];
   const recommendation = best?.analysis?.recommendation || "WAITING";
@@ -203,6 +208,58 @@ function ProofPanel({ lastAction, walletData }) {
           <span>Amount</span>
           <strong>{lastAction ? `${formatUsd(lastAction.size)} USDC` : "1 USDC cap"}</strong>
         </div>
+      </div>
+    </section>
+  );
+}
+
+function WatchPanel({ watch, runs }) {
+  const latest = runs?.[0];
+  return (
+    <section className="watchPanel">
+      <div>
+        <p className="eyebrow">Autonomous Watch Mode</p>
+        <h2>{watch?.active ? "Edged is watching markets" : "Watch mode is paused"}</h2>
+        <p>
+          {watch?.active
+            ? `Last scan ${formatTime(watch.lastRunAt)}. Next scan ${formatTime(watch.nextRunAt)}.`
+            : "Start watch mode to let Edged scan on a timer and record traceable autonomous runs."}
+        </p>
+      </div>
+      <div className="watchStats">
+        <div>
+          <span>Recent runs</span>
+          <strong>{runs?.length || 0}</strong>
+        </div>
+        <div>
+          <span>Latest source</span>
+          <strong>{latest?.source || "—"}</strong>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function RunHistory({ runs }) {
+  if (!runs?.length) return null;
+
+  return (
+    <section className="historyPanel">
+      <div className="panelHeader">
+        <div>
+          <p className="eyebrow">Run History</p>
+          <h2>Traceable Agent Runs</h2>
+        </div>
+        <span>{runs.length} stored</span>
+      </div>
+      <div className="historyGrid">
+        {runs.slice(0, 6).map((run) => (
+          <a className="historyCard" href={`/api/trace/${run.runId}`} key={run.runId} target="_blank">
+            <span>{run.source || "manual"}</span>
+            <strong>{run.tradesExecuted} actions · {run.opportunitiesFound} edges</strong>
+            <small>{formatTime(run.completedAt)} · {run.runId}</small>
+          </a>
+        ))}
       </div>
     </section>
   );
@@ -299,6 +356,9 @@ export default function Home() {
   const [error, setError] = useState(null);
   const [walletData, setWalletData] = useState(null);
   const [lastAction, setLastAction] = useState(null);
+  const [watch, setWatch] = useState(null);
+  const [runs, setRuns] = useState([]);
+  const [watchBusy, setWatchBusy] = useState(false);
   const logRef = useRef(null);
 
   useEffect(() => {
@@ -311,6 +371,24 @@ export default function Home() {
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [log]);
+
+  async function refreshHistory() {
+    const res = await fetch("/api/agent/history");
+    const data = await res.json();
+    setRuns(data.runs || []);
+    setWatch(data.watch || null);
+  }
+
+  useEffect(() => {
+    refreshHistory().catch(() => {});
+  }, []);
+
+  function applyRun(data) {
+    setItems(data.results || []);
+    setLastAction((data.results || []).find((item) => item.trade && !item.trade.paper && !item.trade.failed && !item.trade.skipped)?.trade || null);
+    setStats({ scanned: data.marketsScanned, trades: data.tradesExecuted, edge: data.opportunitiesFound });
+    setLog(data.log || ["Scan complete."]);
+  }
 
   async function run() {
     if (running) return;
@@ -327,10 +405,8 @@ export default function Home() {
       if (!res.ok) throw new Error(`Server error ${res.status}`);
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      setItems(data.results || []);
-      setLastAction((data.results || []).find((item) => item.trade && !item.trade.paper && !item.trade.failed && !item.trade.skipped)?.trade || null);
-      setStats({ scanned: data.marketsScanned, trades: data.tradesExecuted, edge: data.opportunitiesFound });
-      setLog(data.log || ["Scan complete."]);
+      applyRun(data);
+      refreshHistory().catch(() => {});
     } catch (err) {
       setError(err.message);
       setLog((prev) => [...prev, `FAILED: ${err.message}`]);
@@ -339,13 +415,46 @@ export default function Home() {
     }
   }
 
+  async function toggleWatch() {
+    if (watchBusy) return;
+    setWatchBusy(true);
+    setError(null);
+    try {
+      const activate = !watch?.active;
+      const res = await fetch("/api/agent/watch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: activate, runNow: activate, bankroll: 100, minEdge: 0.05 }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
+      setWatch(data.watch || null);
+      if (data.run) applyRun(data.run);
+      await refreshHistory();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setWatchBusy(false);
+    }
+  }
+
   useEffect(() => {
-    if (!autoRun) return;
-    const id = setInterval(() => {
-      if (!running) run();
-    }, 60000);
+    if (!watch?.active) return;
+    const id = setInterval(async () => {
+      try {
+        const res = await fetch("/api/agent/watch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ active: true, bankroll: 100, minEdge: 0.05 }),
+        });
+        const data = await res.json();
+        setWatch(data.watch || null);
+        if (data.run) applyRun(data.run);
+        await refreshHistory();
+      } catch {}
+    }, 10000);
     return () => clearInterval(id);
-  }, [autoRun, running]);
+  }, [watch?.active]);
 
   const deployed = useMemo(
     () => items.filter((item) => item.trade && !item.trade.failed).reduce((sum, item) => sum + (item.sizing?.betSize || 0), 0),
@@ -376,8 +485,8 @@ export default function Home() {
           </p>
         </div>
         <div className="heroActions">
-          <ShellButton variant="secondary" active={autoRun} onClick={() => setAutoRun((value) => !value)}>
-            {autoRun ? "Auto running" : "Auto 60s"}
+          <ShellButton variant="secondary" active={watch?.active} disabled={watchBusy || running} onClick={toggleWatch}>
+            {watch?.active ? "Stop watch" : watchBusy ? "Starting" : "Watch mode"}
           </ShellButton>
           <ShellButton disabled={running} onClick={run}>
             {running ? "Scanning" : "Run agent"}
@@ -389,6 +498,8 @@ export default function Home() {
       <MetricStrip stats={stats} deployed={deployed} walletData={walletData} />
       <DecisionRail items={items} running={running} />
       <ProofPanel lastAction={lastAction} walletData={walletData} />
+      <WatchPanel watch={watch} runs={runs} />
+      <RunHistory runs={runs} />
 
       {error && <div className="errorBanner">{error}</div>}
 
