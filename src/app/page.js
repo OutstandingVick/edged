@@ -356,7 +356,7 @@ export default function Home() {
     <main className="appShell">
       <nav className="topNav">
         <div className="brandMark">
-          <span>AO</span>
+          <img src="/edged-mark.svg" alt="" />
           Edged
         </div>
         <div className="navLinks">

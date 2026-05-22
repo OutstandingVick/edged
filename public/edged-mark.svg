@@ -1,0 +1,9 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Edged mark</title>
+  <desc id="desc">A blue circular mark with an ascending edge line.</desc>
+  <circle cx="64" cy="64" r="64" fill="#006FD6"/>
+  <circle cx="64" cy="64" r="48" fill="#FFFFFF" fill-opacity="0.12"/>
+  <path d="M31 81H98" stroke="#DFF1FF" stroke-width="9" stroke-linecap="round"/>
+  <path d="M35 85L54 65L71 75L97 45" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="97" cy="45" r="9" fill="#40D99C"/>
+</svg>

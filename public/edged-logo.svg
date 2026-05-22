@@ -1,0 +1,18 @@
+<svg width="720" height="180" viewBox="0 0 720 180" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Edged logo</title>
+  <desc id="desc">A blue circular mark with an ascending edge line next to the Edged wordmark.</desc>
+  <rect width="720" height="180" rx="36" fill="#FFFFFF"/>
+  <g transform="translate(42 34)">
+    <circle cx="56" cy="56" r="56" fill="#006FD6"/>
+    <circle cx="56" cy="56" r="42" fill="#FFFFFF" fill-opacity="0.12"/>
+    <path d="M25 72H88" stroke="#DFF1FF" stroke-width="8" stroke-linecap="round"/>
+    <path d="M29 76L47 58L62 67L86 40" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="86" cy="40" r="8" fill="#40D99C"/>
+  </g>
+  <text x="180" y="108" fill="#1F1B3D" font-family="Inter, Arial, sans-serif" font-size="74" font-weight="800" letter-spacing="-1">
+    Edged
+  </text>
+  <text x="184" y="137" fill="#68637F" font-family="IBM Plex Mono, Menlo, monospace" font-size="18" font-weight="600" letter-spacing="2">
+    PUBLIC ODDS. AUTONOMOUS EDGE.
+  </text>
+</svg>
