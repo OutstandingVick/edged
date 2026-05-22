@@ -41,7 +41,7 @@ export async function getOrCreateAgentWallet() {
   let walletSetId = process.env.CIRCLE_WALLET_SET_ID;
 
   if (!walletSetId) {
-    const setName = `AgentOracle-${Date.now()}`;
+    const setName = `Edged-${Date.now()}`;
     const walletSetRes = await client.createWalletSet({ name: setName });
     walletSetId = walletSetRes.data?.walletSet?.id;
     if (!walletSetId) throw new Error("Failed to create WalletSet");

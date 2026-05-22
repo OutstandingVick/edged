@@ -1,4 +1,4 @@
-# AgentOracle
+# Edged
 **Autonomous AI prediction market trader** · Agora Hackathon 2026
 
 > Scans Polymarket → Gemini estimates edge → Kelly sizes bet → Executes autonomously

@@ -13,7 +13,7 @@ export async function GET() {
       demo: true,
       wallet: {
         id: "demo-wallet-id",
-        address: "0x000000000000000000000000000000AgentOracle",
+        address: "0x0000000000000000000000000000000000000000",
         blockchain: "ARC-TESTNET",
         state: "DEMO",
       },

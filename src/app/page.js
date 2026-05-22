@@ -357,7 +357,7 @@ export default function Home() {
       <nav className="topNav">
         <div className="brandMark">
           <span>AO</span>
-          AgentOracle
+          Edged
         </div>
         <div className="navLinks">
           <span>Markets</span>
@@ -371,7 +371,7 @@ export default function Home() {
           <p className="eyebrow">Circle Agent Stack × Arc Testnet</p>
           <h1>Financial intelligence for prediction markets.</h1>
           <p>
-            AgentOracle scans live Polymarket order books, estimates fair odds, explains its thesis,
+            Edged scans live Polymarket order books, estimates fair odds, explains its thesis,
             sizes exposure with Kelly, and settles test USDC through Circle developer-controlled wallets.
           </p>
         </div>

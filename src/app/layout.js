@@ -1,7 +1,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "AgentOracle — AI Prediction Market Trader",
+  title: "Edged — AI Prediction Market Trader",
   description: "Autonomous AI agent that finds mispriced prediction markets and executes bets via Kelly Criterion. Built on Arc + Circle.",
 };
 

@@ -45,7 +45,7 @@ export async function POST(req) {
   const { market } = await req.json();
   if (!market) return Response.json({ error: "No market" }, { status: 400 });
 
-  const prompt = `You are an autonomous AI prediction market trader called AgentOracle.
+  const prompt = `You are an autonomous AI prediction market trader called Edged.
 
 Analyze this market and estimate the true probability of YES:
 
