@@ -3,6 +3,7 @@ import { addRun, getWatchState, updateWatchState } from "@/lib/runs";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
+export const dynamic = "force-dynamic";
 
 function getNextRunAt(intervalMs) {
   return new Date(Date.now() + intervalMs).toISOString();

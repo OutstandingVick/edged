@@ -1,6 +1,7 @@
 import { getRun } from "@/lib/runs";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function GET(_req, { params }) {
   const run = getRun(params.runId);

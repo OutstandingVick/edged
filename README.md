@@ -28,6 +28,7 @@ The key product idea is that the reasoning trace is not hidden. Every decision i
 - Runs in paper mode by default.
 - Supports live Arc Testnet USDC transfers through Circle wallets.
 - Shows wallet funding, execution mode, escrow destination, and proof-of-action in the UI.
+- Includes watch mode, run history, and trace endpoints for autonomous monitoring.
 
 ## Circle + Arc Integration
 
@@ -53,7 +54,10 @@ CIRCLE_MAX_LIVE_TRADE_USDC=1
 Next.js app
 ├── Dashboard UI
 ├── /api/agent/run       autonomous scan/reason/size/execute loop
+├── /api/agent/watch     watch-mode scan trigger and state
+├── /api/agent/history   recent run history
 ├── /api/analyze         Gemini + fallback probability analyzer
+├── /api/trace/[runId]   JSON trace for a specific run
 ├── /api/wallet          Circle wallet status and balances
 └── lib/
     ├── polymarket.js    Gamma/CLOB market data + Kelly sizing
@@ -127,6 +131,16 @@ CIRCLE_MAX_LIVE_TRADE_USDC=1
 ```
 
 Then restart the server and click **Run agent**.
+
+## Watch Mode
+
+The UI can start watch mode, which keeps Edged scanning on a timer while the app is open. Each watch run is stored in memory and appears in the run history with a trace endpoint:
+
+```text
+/api/trace/run_...
+```
+
+For production, this can be upgraded to a durable database and scheduled worker. For the hackathon demo, it proves the agent can monitor, decide, and act beyond a one-off dashboard click.
 
 ## Demo Notes
 

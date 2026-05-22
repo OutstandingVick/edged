@@ -350,7 +350,6 @@ function AgentLog({ log, logRef }) {
 export default function Home() {
   const [items, setItems] = useState(DEMO);
   const [running, setRunning] = useState(false);
-  const [autoRun, setAutoRun] = useState(false);
   const [stats, setStats] = useState({ scanned: "—", trades: "—", edge: "—" });
   const [log, setLog] = useState(["Ready. Run the agent to scan live markets."]);
   const [error, setError] = useState(null);
@@ -457,7 +456,7 @@ export default function Home() {
   }, [watch?.active]);
 
   const deployed = useMemo(
-    () => items.filter((item) => item.trade && !item.trade.failed).reduce((sum, item) => sum + (item.sizing?.betSize || 0), 0),
+    () => items.filter((item) => item.trade && !item.trade.failed && !item.trade.skipped).reduce((sum, item) => sum + (item.trade?.size || item.sizing?.betSize || 0), 0),
     [items]
   );
 
