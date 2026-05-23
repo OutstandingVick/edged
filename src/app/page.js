@@ -538,11 +538,22 @@ export default function Home() {
         <button
           className="themeToggle"
           type="button"
+          aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
           aria-pressed={darkMode}
+          title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
           onClick={() => setDarkMode((value) => !value)}
         >
-          <span>{darkMode ? "Dark" : "Light"}</span>
-          <strong>{darkMode ? "Switch to light" : "Switch to dark"}</strong>
+          <span className={darkMode ? "" : "active"} aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="img">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2.2M12 19.8V22M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2 12h2.2M19.8 12H22M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6" />
+            </svg>
+          </span>
+          <span className={darkMode ? "active" : ""} aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="img">
+              <path d="M20.4 14.5A7.4 7.4 0 0 1 9.5 3.6a8.8 8.8 0 1 0 10.9 10.9Z" />
+            </svg>
+          </span>
         </button>
       </footer>
     </main>

@@ -840,36 +840,49 @@ button {
 }
 
 .themeToggle {
-  display: inline-grid;
-  grid-template-columns: auto auto;
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  min-height: 40px;
+  gap: 4px;
+  width: 76px;
+  height: 40px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  padding: 5px 6px 5px 14px;
+  padding: 4px;
   color: var(--ink);
   background: var(--panel);
   cursor: pointer;
-  text-transform: none;
   box-shadow: 0 14px 34px var(--shadow);
 }
 
 .themeToggle span {
+  width: 31px;
+  height: 31px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
   color: var(--muted);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  transition: background 160ms ease, color 160ms ease, transform 160ms ease;
 }
 
-.themeToggle strong {
-  border-radius: 999px;
-  padding: 8px 12px;
+.themeToggle span.active {
   color: #ffffff;
   background: var(--blue);
-  font-size: 11px;
-  letter-spacing: 0.02em;
+  transform: scale(1.02);
+}
+
+.themeToggle svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.themeToggle svg circle {
+  fill: currentColor;
+  stroke: none;
 }
 
 html[data-theme="dark"] .decisionDial {
@@ -1157,7 +1170,6 @@ html[data-theme="dark"] .marketFill {
   }
 
   .themeToggle {
-    justify-content: space-between;
-    width: 100%;
+    align-self: start;
   }
 }
