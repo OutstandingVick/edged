@@ -865,15 +865,29 @@ button {
     white-space: nowrap;
   }
 
-  .heroBar,
+  .heroBar {
+    padding: 18px;
+    border-radius: 18px;
+  }
+
   .walletPanel,
   .decisionRail,
   .proofPanel,
   .watchPanel,
   .marketCard,
   .logPanel {
-    padding: 18px;
-    border-radius: 18px;
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .walletPanel,
+  .metricStrip,
+  .decisionRail,
+  .proofPanel,
+  .watchPanel,
+  .workbench,
+  .historyPanel {
+    margin-top: 12px;
   }
 
   .heroActions,
@@ -885,6 +899,163 @@ button {
   .tradeGrid,
   .marketTopline {
     grid-template-columns: 1fr;
+  }
+
+  .metricStrip,
+  .walletStats,
+  .proofGrid,
+  .watchStats,
+  .historyGrid,
+  .tradeGrid {
+    gap: 8px;
+  }
+
+  .walletStats div,
+  .proofGrid div,
+  .watchStats div,
+  .historyCard,
+  .metric,
+  .tracePanel,
+  .tradeGrid div {
+    border-radius: 12px;
+  }
+
+  .walletPanel h2,
+  .panelHeader h2,
+  .proofPanel h2,
+  .watchPanel h2,
+  .historyPanel h2 {
+    font-size: 20px;
+  }
+
+  .walletPanel p:not(.eyebrow),
+  .proofPanel p:not(.eyebrow),
+  .watchPanel p:not(.eyebrow),
+  .insight,
+  .tracePanel p:not(.eyebrow) {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .walletStats div,
+  .proofGrid div,
+  .watchStats div {
+    min-height: auto;
+    padding: 10px;
+  }
+
+  .walletStats strong {
+    margin-top: 5px;
+    font-size: 18px;
+  }
+
+  .statusPill {
+    padding: 7px 10px;
+    font-size: 10px;
+  }
+
+  .metric {
+    min-height: auto;
+    padding: 12px;
+  }
+
+  .metric strong {
+    margin-top: 10px;
+    font-size: 22px;
+  }
+
+  .metric small {
+    margin-top: 5px;
+  }
+
+  .decisionRail {
+    gap: 14px;
+  }
+
+  .decisionRail h1 {
+    font-size: 28px;
+  }
+
+  .decisionRail p:not(.eyebrow) {
+    margin-top: 8px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .decisionDial {
+    width: 132px;
+    justify-self: start;
+    box-shadow: inset 0 0 0 10px #eff7ff;
+  }
+
+  .decisionDial strong {
+    font-size: 28px;
+  }
+
+  .proofGrid strong,
+  .watchStats strong,
+  .historyCard strong {
+    margin-top: 10px;
+  }
+
+  .historyCard {
+    min-height: auto;
+    padding: 12px;
+  }
+
+  .historyCard strong {
+    font-size: 14px;
+  }
+
+  .historyCard small {
+    margin-top: 5px;
+  }
+
+  .panelHeader {
+    align-items: start;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .marketCard {
+    margin-bottom: 8px;
+  }
+
+  .marketCard h3 {
+    font-size: 15px;
+    line-height: 1.35;
+  }
+
+  .tagRow {
+    gap: 5px;
+    margin-bottom: 8px;
+  }
+
+  .tag {
+    padding: 4px 7px;
+    font-size: 9px;
+  }
+
+  .edgeBlock strong {
+    font-size: 20px;
+  }
+
+  .probabilityBand,
+  .tracePanel {
+    margin-top: 10px;
+  }
+
+  .tradeGrid div {
+    padding: 9px;
+  }
+
+  .logStream {
+    height: 340px;
+  }
+
+  .logStream p {
+    padding: 8px 0;
+    font-size: 11px;
   }
 
   .shellButton {
