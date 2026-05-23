@@ -280,6 +280,7 @@ function MarketCard({ item }) {
           <div className="tagRow">
             <span className="tag primary">{analysis.recommendation}</span>
             <span className="tag">{analysis.confidence} confidence</span>
+            {analysis.provider && !analysis.fallback && <span className="tag provider">{analysis.provider}</span>}
             {analysis.fallback && <span className="tag warning">AI fallback</span>}
             {trade && <span className="tag actioned">{trade.paper ? "Paper action" : "Arc transfer"}</span>}
           </div>

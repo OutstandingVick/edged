@@ -670,6 +670,12 @@ button {
   background: rgba(239, 157, 25, 0.14);
 }
 
+.tag.provider {
+  color: var(--violet);
+  border-color: rgba(95, 72, 217, 0.28);
+  background: rgba(95, 72, 217, 0.1);
+}
+
 .tag.actioned {
   color: #056344;
   border-color: #bcebd7;

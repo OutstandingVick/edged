@@ -91,6 +91,9 @@ http://localhost:3000
 
 ```env
 # AI
+AI_PROVIDER=deepseek
+DEEPSEEK_API_KEY=
+DEEPSEEK_MODEL=deepseek-chat
 GEMINI_API_KEY=
 GEMINI_MODEL=gemini-2.0-flash
 ALLOW_AI_FALLBACK=true
