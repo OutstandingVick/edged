@@ -836,10 +836,33 @@ button {
     padding-top: 10px;
   }
 
-  .topNav,
+  .topNav {
+    min-height: 54px;
+    align-items: center;
+    flex-direction: row;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .brandMark {
+    gap: 8px;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .brandMark img {
+    width: 30px;
+    height: 30px;
+  }
+
   .navLinks {
-    align-items: flex-start;
-    flex-direction: column;
+    align-items: center;
+    flex-direction: row;
+    justify-content: flex-end;
+    gap: 9px;
+    min-width: 0;
+    font-size: 10px;
+    white-space: nowrap;
   }
 
   .heroBar,
