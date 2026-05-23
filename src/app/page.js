@@ -358,7 +358,18 @@ export default function Home() {
   const [watch, setWatch] = useState(null);
   const [runs, setRuns] = useState([]);
   const [watchBusy, setWatchBusy] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
   const logRef = useRef(null);
+
+  useEffect(() => {
+    const savedTheme = window.localStorage.getItem("edged-theme");
+    setDarkMode(savedTheme === "dark");
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = darkMode ? "dark" : "light";
+    window.localStorage.setItem("edged-theme", darkMode ? "dark" : "light");
+  }, [darkMode]);
 
   useEffect(() => {
     fetch("/api/wallet")
@@ -519,9 +530,20 @@ export default function Home() {
       </section>
 
       <footer className="footerLine">
-        <span>Polymarket intelligence</span>
-        <span>Circle developer-controlled wallet</span>
-        <span>Arc Testnet settlement</span>
+        <div>
+          <span>Polymarket intelligence</span>
+          <span>Circle developer-controlled wallet</span>
+          <span>Arc Testnet settlement</span>
+        </div>
+        <button
+          className="themeToggle"
+          type="button"
+          aria-pressed={darkMode}
+          onClick={() => setDarkMode((value) => !value)}
+        >
+          <span>{darkMode ? "Dark" : "Light"}</span>
+          <strong>{darkMode ? "Switch to light" : "Switch to dark"}</strong>
+        </button>
       </footer>
     </main>
   );
