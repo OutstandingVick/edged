@@ -2,47 +2,46 @@
 
 Autonomous market intelligence for prediction markets.
 
-Edged scans live Polymarket markets, estimates where public odds may be mispriced, sizes exposure with Kelly Criterion, publishes its reasoning trace, and can execute capped USDC actions through Circle developer-controlled wallets on Arc Testnet.
+Edged scans live Polymarket markets, estimates fair probability with AI, sizes exposure with half-Kelly, publishes a reasoning trace, and can execute capped USDC actions through Circle developer-controlled wallets on Arc Testnet.
 
 Built for the Agora Agents Hackathon by [@outstandingvick](https://x.com/outstandingvick) / SuperteamNG.
 
 ![Edged logo](public/edged-logo.svg)
 
-## Why It Exists
+## Why
 
-Prediction markets expose public beliefs, but most traders still need to manually scan markets, reason about fair probabilities, size risk, and act. Edged turns that workflow into an autonomous agent loop:
+Prediction markets turn public belief into prices, but acting on those prices still takes a lot of manual work: finding markets, estimating fair odds, sizing risk, and executing. Edged packages that workflow into an agent loop:
 
 ```text
-scan markets -> reason about true odds -> size with Kelly -> act with USDC -> publish trace
+scan markets -> reason about fair odds -> size risk -> execute -> publish trace
 ```
 
-The key product idea is that the reasoning trace is not hidden. Every decision is explainable, reviewable, and suitable for a future agent-following experience.
+The important part is transparency. Each decision includes a reasoning trace so the agent's actions can be inspected instead of treated as a black box.
 
 ## What It Does
 
-- Fetches live markets and prices from Polymarket Gamma + CLOB APIs.
-- Uses Gemini for probability estimation when quota is available.
-- Falls back to a deterministic low-confidence analyzer when AI quota is exceeded.
-- Computes edge versus market-implied probability.
-- Sizes positions with half-Kelly and a configurable max bet cap.
+- Fetches live markets and prices from Polymarket Gamma and CLOB APIs.
+- Uses DeepSeek for structured probability estimates, with Gemini available as a fallback provider.
+- Computes edge against market-implied probability.
+- Sizes exposure with half-Kelly and a configurable max bet cap.
 - Runs in paper mode by default.
-- Supports live Arc Testnet USDC transfers through Circle wallets.
-- Shows wallet funding, execution mode, escrow destination, and proof-of-action in the UI.
-- Includes watch mode, run history, and trace endpoints for autonomous monitoring.
+- Supports capped Arc Testnet USDC transfers through Circle wallets.
+- Shows treasury balance, execution mode, escrow destination, action history, and trace links in the UI.
+- Includes watch mode for repeated scans while the app is open.
 
-## Circle + Arc Integration
+## Circle + Arc
 
 Edged uses Circle Developer-Controlled Wallets as the agent treasury and execution rail.
 
-Current live-mode flow:
+Live-mode flow:
 
-1. Circle creates an Arc Testnet wallet for the agent.
+1. Circle creates or loads the agent wallet on Arc Testnet.
 2. The wallet is funded with testnet USDC.
 3. Edged scans live markets and identifies an edge.
-4. If `PAPER_TRADING=false`, Edged sends a capped USDC transfer to an escrow wallet.
-5. The UI displays the live mode state and latest proof-of-action.
+4. If live mode is enabled, Edged sends a capped USDC transfer to an escrow wallet.
+5. The dashboard and Circle Console show the completed action.
 
-For safety, live transfers are capped with:
+Live execution is capped for safety:
 
 ```env
 CIRCLE_MAX_LIVE_TRADE_USDC=1
@@ -53,25 +52,27 @@ CIRCLE_MAX_LIVE_TRADE_USDC=1
 ```text
 Next.js app
 ├── Dashboard UI
-├── /api/agent/run       autonomous scan/reason/size/execute loop
-├── /api/agent/watch     watch-mode scan trigger and state
-├── /api/agent/history   recent run history
-├── /api/analyze         Gemini + fallback probability analyzer
-├── /api/trace/[runId]   JSON trace for a specific run
+├── /api/agent/run       scan, reason, size, execute
+├── /api/agent/watch     watch-mode trigger and state
+├── /api/agent/history   in-memory run history
+├── /api/analyze         DeepSeek/Gemini probability analyzer
+├── /api/trace/[runId]   JSON trace for a run
 ├── /api/wallet          Circle wallet status and balances
 └── lib/
-    ├── polymarket.js    Gamma/CLOB market data + Kelly sizing
-    └── circle.js        Circle wallet + transfer wrapper
+    ├── agent.js         agent loop
+    ├── circle.js        Circle wallet and transfer wrapper
+    ├── polymarket.js    market data and Kelly sizing
+    └── runs.js          in-memory run store
 ```
 
 ## Tech Stack
 
 - **Frontend:** Next.js 14, React
-- **AI reasoning:** Google Gemini
-- **Market data:** Polymarket Gamma API + CLOB API
+- **AI reasoning:** DeepSeek, with optional Gemini fallback
+- **Market data:** Polymarket Gamma API and CLOB API
 - **Wallet execution:** Circle Developer-Controlled Wallets
 - **Settlement rail:** Arc Testnet
-- **Risk sizing:** Half-Kelly Criterion with configurable cap
+- **Risk sizing:** Half-Kelly with a configurable cap
 
 ## Local Setup
 
@@ -81,13 +82,9 @@ cp .env.local.example .env.local
 npm run dev
 ```
 
-Open:
+Open `http://localhost:3000`.
 
-```text
-http://localhost:3000
-```
-
-## Environment Variables
+## Environment
 
 ```env
 # AI
@@ -108,7 +105,7 @@ CIRCLE_USDC_TOKEN_ID=
 CIRCLE_ESCROW_ADDRESS=
 CIRCLE_MAX_LIVE_TRADE_USDC=1
 
-# Agent config
+# Agent
 PAPER_TRADING=true
 BANKROLL=100
 MAX_BET_FRACTION=0.05
@@ -133,29 +130,17 @@ CIRCLE_ESCROW_ADDRESS=0x...
 CIRCLE_MAX_LIVE_TRADE_USDC=1
 ```
 
-Then restart the server and click **Run agent**.
+Restart the server after changing env vars, then click **Run agent**.
 
-## Watch Mode
-
-The UI can start watch mode, which keeps Edged scanning on a timer while the app is open. Each watch run is stored in memory and appears in the run history with a trace endpoint:
-
-```text
-/api/trace/run_...
-```
-
-For production, this can be upgraded to a durable database and scheduled worker. For the hackathon demo, it proves the agent can monitor, decide, and act beyond a one-off dashboard click.
-
-## Demo Notes
-
-The strongest demo path is:
+## Demo Path
 
 1. Show the funded Circle Arc Testnet treasury.
-2. Run Edged.
+2. Run Edged or open a previous run.
 3. Open a market thesis card.
-4. Show probability edge, Kelly sizing, and reasoning trace.
-5. Show the audit log entry for the live Arc transfer.
-6. Show the escrow wallet received test USDC.
+4. Show the AI provider tag, probability edge, Kelly size, and reasoning trace.
+5. Show `Arc transfer` in the UI.
+6. Show the completed outbound/inbound transfer in Circle Console.
 
 ## Safety
 
-This is a hackathon prototype using testnet funds. It is not financial advice and does not place live Polymarket orders by default. Live mode is intentionally capped and routed through Arc Testnet USDC transfers for demo proof.
+This is a hackathon prototype using testnet funds. It is not financial advice and does not place live Polymarket orders. Live mode is intentionally capped and uses Arc Testnet USDC transfers for proof of action.

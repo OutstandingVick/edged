@@ -1,11 +1,3 @@
-/**
- * circle.js
- * Manages the agent's developer-controlled wallet on Arc Testnet.
- * 
- * First run: creates a WalletSet + Wallet, saves IDs to env.
- * Subsequent runs: reuses existing wallet.
- */
-
 import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-controlled-wallets";
 
 function getClient() {
@@ -19,15 +11,9 @@ function getClient() {
   return initiateDeveloperControlledWalletsClient({ apiKey, entitySecret });
 }
 
-/**
- * Get or create the agent's wallet on Arc Testnet.
- * If CIRCLE_WALLET_ID is already in env, fetch that wallet.
- * Otherwise, create a new WalletSet + Wallet and return it.
- */
 export async function getOrCreateAgentWallet() {
   const client = getClient();
 
-  // If wallet already exists, return it
   if (process.env.CIRCLE_WALLET_ID) {
     try {
       const res = await client.getWallet({ id: process.env.CIRCLE_WALLET_ID });
@@ -47,7 +33,6 @@ export async function getOrCreateAgentWallet() {
     if (!walletSetId) throw new Error("Failed to create WalletSet");
   }
 
-  // Create wallet on Arc Testnet
   const walletRes = await client.createWallets({
     blockchains: ["ARC-TESTNET"],
     count: 1,
@@ -60,9 +45,6 @@ export async function getOrCreateAgentWallet() {
   return { wallet, walletSetId, isNew: true };
 }
 
-/**
- * Get wallet token balances (USDC on Arc Testnet)
- */
 export async function getWalletBalance(walletId) {
   const client = getClient();
   try {
@@ -74,9 +56,6 @@ export async function getWalletBalance(walletId) {
   }
 }
 
-/**
- * Send USDC from agent wallet (for live trade execution — Day 3)
- */
 export async function sendUSDC({ walletId, destinationAddress, amount }) {
   const client = getClient();
   const tokenId = process.env.CIRCLE_USDC_TOKEN_ID;
